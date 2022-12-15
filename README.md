@@ -63,6 +63,23 @@ explain analyze select concat(c.last_name, ' ', c.first_name) as name, sum(p.amo
  |
 
 ```
+Следующая иттерация, отказываемся от ненужной таблицы film
+```
+explain analyze select  concat(c.last_name, ' ', c.first_name) as name, sum(p.amount) from payment p, rental r, customer c, inventory i where date(p.payment_date) = '2005-07-30' and p.payment_date = r.rental_date and  r.customer_id = c.customer_id and i.inventory_id = r.inventory_id group by name;
+
+| -> Table scan on <temporary>  (actual time=7.922..7.963 rows=391 loops=1)
+    -> Aggregate using temporary table  (actual time=7.920..7.920 rows=391 loops=1)
+        -> Nested loop inner join  (cost=28953.66 rows=15588) (actual time=0.075..7.352 rows=642 loops=1)
+            -> Nested loop inner join  (cost=23497.88 rows=15588) (actual time=0.072..6.664 rows=642 loops=1)
+                -> Nested loop inner join  (cost=18042.10 rows=15588) (actual time=0.066..6.119 rows=642 loops=1)
+                    -> Filter: (cast(p.payment_date as date) = '2005-07-30')  (cost=1564.25 rows=15400) (actual time=0.051..4.885 rows=634 loops=1)
+                        -> Table scan on p  (cost=1564.25 rows=15400) (actual time=0.040..3.666 rows=16044 loops=1)
+                    -> Covering index lookup on r using rental_date (rental_date=p.payment_date)  (cost=0.97 rows=1) (actual time=0.001..0.002 rows=1 loops=634)
+                -> Single-row index lookup on c using PRIMARY (customer_id=r.customer_id)  (cost=0.25 rows=1) (actual time=0.001..0.001 rows=1 loops=642)
+            -> Single-row covering index lookup on i using PRIMARY (inventory_id=r.inventory_id)  (cost=0.25 rows=1) (actual time=0.001..0.001 rows=1 loops=642)
+
+```
+
 
 ---
 
